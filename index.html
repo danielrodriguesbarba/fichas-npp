@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Fichas de avaliação · piloto Sondagens</title>
+<title>Fichas NPP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" rel="stylesheet">
 <style>
@@ -438,7 +438,7 @@ async function atualizarResumo(){
 let cad={}, syncT, syncMsg='';
 function msg(t,erro){ $('#estado').innerHTML=(erro?'<b style="color:#ffd9a0">'+t+'</b>':t) }
 function agendarSync(){ if(!ligado())return; clearTimeout(syncT); syncT=setTimeout(async()=>{ try{ msg('Enviando para a planilha…'); await salvarSecao(); msg('<b>Salvo na planilha</b> e neste aparelho.'); }catch(e){ msg('Não foi possível salvar na planilha: '+e.message+'. O rascunho continua neste aparelho.',true) } },3500) }
-async function entrar(){ try{ await pedirToken('consent'); $('#bgoo').textContent='Google conectado'; $('#bgoo').setAttribute('aria-pressed','true'); msg('<b>Google conectado.</b> Escolha o paciente.'); abrirPaciente() }catch(e){ msg('Não foi possível entrar: '+e.message,true) } }
+async function entrar(){ try{ await pedirToken('consent'); $('#bgoo').textContent='Google conectado'; $('#bgoo').setAttribute('aria-pressed','true'); msg('<b>Google conectado.</b> Escolha o paciente.'); abrirPaciente() }catch(e){ msg(({popup_closed:'A janela do Google foi fechada antes de terminar. Clique em “Entrar com o Google” e conclua o acesso.',popup_failed_to_open:'O navegador bloqueou a janela do Google. Permita janelas pop-up para este site e tente de novo.'})[e.message]||'Não foi possível entrar: '+e.message,true) } }
 async function abrirPaciente(){
   const dlg=$('#dlg'); const box=$('#dlgbox'); box.replaceChildren(el('h2',{},'Paciente'));
   const fechar=()=>dlg.close();
