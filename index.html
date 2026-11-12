@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fichas NPP</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2F5D73">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fichas NPP">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" rel="stylesheet">
 <style>
@@ -117,12 +123,17 @@ h3+.lead-p{margin:6px 0 0;color:var(--mut)}
 .estimulo{margin:14px 0;display:grid;gap:10px;justify-items:start}.est-flash{font:700 34px var(--tit);color:var(--pe);border:2px solid var(--ln);border-radius:12px;padding:16px 28px;background:#fff;letter-spacing:.06em}.est-seq{font:700 22px var(--tit);letter-spacing:.14em;word-spacing:.5em;line-height:1.7;background:#fff;border:2px solid var(--ln);border-radius:12px;padding:14px 20px}
 .dsg{display:flex;flex-wrap:wrap;gap:8px}
 .tot{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:end;justify-content:flex-end;margin:10px 0}.tot-sa{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:15px;color:var(--mut)}.tot-sa b{color:var(--pe);font-family:var(--tit);font-size:18px}
+.cron{display:flex;gap:10px;align-items:center;margin-top:12px}.cron b{font:700 22px var(--tit);color:var(--pe);min-width:3.2em}
+.btn.pend{display:flex;justify-content:space-between;gap:12px;text-align:left;width:100%;align-items:center}
+.guia{padding-left:1.2em;display:grid;gap:10px}.guia b{font-family:var(--tit);color:var(--pe)}
+.cmpw{overflow:auto;max-height:60vh}.cmp{border-collapse:collapse;width:100%;font-size:15px}.cmp th{background:var(--pe);color:#fff;text-align:left;padding:6px 8px;position:sticky;top:0}.cmp td{padding:6px 8px;border-bottom:1px solid var(--ln)}.cmp tr.mud td{background:var(--hl)}
+.rb[hidden]{display:none}.rb:disabled{opacity:.8;border-color:var(--mo);cursor:default}
 /* tablet / notebook estreito: trilho vira barra */
 @media (max-width:1000px){
  .app{grid-template-columns:1fr}
  .rail{position:sticky;top:0;z-index:5;height:auto;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:center}
  .rail h1,.rail .sub,.estado{display:none}
- .pac{margin:0;order:2;display:flex;gap:8px}
+ .pac{margin:0;order:2;display:flex;gap:8px;flex-wrap:wrap}
  .rb{margin:0;white-space:nowrap}
  .nav{align-items:start;grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);overflow-x:auto;grid-column:1/-1;order:3;padding-bottom:4px}
  .nav .s{display:none}
@@ -138,7 +149,7 @@ h3+.lead-p{margin:6px 0 0;color:var(--mut)}
  <aside class="rail" aria-label="Seções da ficha">
   <h1 id="rt"></h1><p class="sub" id="rs"></p>
   <div class="fsel"><label for="fsel">Ficha</label><select id="fsel"></select></div>
-  <div class="pac"><button id="bpac" class="rb" type="button">Escolher paciente</button><button id="bgoo" class="rb" type="button" aria-pressed="false">Entrar com o Google</button><button id="bexp" class="rb" type="button">Exportar PDF ou Doc</button></div>
+  <div class="pac"><button id="bpac" class="rb" type="button">Escolher paciente</button><button id="bgoo" class="rb" type="button" aria-pressed="false">Entrar com o Google</button><button id="bexp" class="rb" type="button">Exportar PDF ou Doc</button><button id="bpend" class="rb" type="button">Pendências</button><button id="bhelp" class="rb" type="button">Como usar</button><button id="binst" class="rb" type="button" hidden>Instalar no aparelho</button><button id="bnet" class="rb" type="button" hidden disabled>Sem internet</button></div>
   <ol class="nav" id="nav"></ol>
   <p class="estado" id="estado"></p>
  </aside>
@@ -159,10 +170,13 @@ let pac = JSON.parse(safeGet('npp:pac')||'{"cod":"","ini":""}'); pac.sheetId=nul
 let vals = {}, current = 0, sections = [];
 const key = ()=>`npp:${pac.cod||'rascunho'}:${FICHA.meta.num}`;
 let imgs={};
-function load(){vals = JSON.parse(safeGet(key())||'{}'); try{imgs=JSON.parse(safeGet(key()+':img')||'{}')}catch(e){imgs={}}}
+let sujo={};
+const sujoKey=()=>`npp:${pac.cod||'rascunho'}:sujo`;
+function gravarSujo(){ safeSet(sujoKey(),JSON.stringify(sujo)) }
+function load(){ try{sujo=JSON.parse(safeGet(sujoKey())||'{}')}catch(e){sujo={}} vals = JSON.parse(safeGet(key())||'{}'); try{imgs=JSON.parse(safeGet(key()+':img')||'{}')}catch(e){imgs={}}}
 function salvarImgs(){ safeSet(key()+':img',JSON.stringify(imgs)) }
 let saveT;
-function set(id,v){ if(sections[current])sections[current].dirty=true; if(v===''||v==null||(Array.isArray(v)&&!v.length)) delete vals[id]; else vals[id]=v;
+function set(id,v){ const s0=sections[current]; if(s0){ s0.dirty=true; const k=FICHA.meta.num+':'+s0.seq; if(!sujo[k])sujo[k]=s0.appCol==null?'n':'c'; gravarSujo() } if(v===''||v==null||(Array.isArray(v)&&!v.length)) delete vals[id]; else vals[id]=v;
   clearTimeout(saveT); saveT=setTimeout(()=>{const ok=safeSet(key(),JSON.stringify(vals)); if(!ligado()) $('#estado').innerHTML = ok?'<b>Salvo neste aparelho.</b> Entre com o Google para enviar à planilha.':'<b>Não foi possível salvar aqui.</b> Este navegador bloqueia o armazenamento.'; },300);
   refreshProgress(); agendarSync(); }
 
@@ -306,15 +320,15 @@ function show(i){
   const prev=el('button',{class:'btn',type:'button',disabled:i===0,onclick:()=>go(i-1)},'Seção anterior');
   const next=el('button',{class:'btn pri',type:'button',disabled:i===sections.length-1,onclick:()=>go(i+1)},'Próxima seção');
   fb.append(el('div',{class:'pe'},prev,next));
-  $('#folha').replaceChildren(el('header',{class:'fh'},el('p',{class:'rot'},s.label),el('h2',{},s.title),s.intro?el('p',{class:'intro'},s.intro):null,aplic(s)),fb);
+  $('#folha').replaceChildren(el('header',{class:'fh'},el('p',{class:'rot'},s.label),el('h2',{},s.title),s.intro?el('p',{class:'intro'},s.intro):null,aplic(s),cronEl()),fb);
   [...$('#nav').children].forEach((li,k)=>li.firstChild.setAttribute('aria-current',k===i));
   refreshProgress();
 }
-async function go(i){ if(ligado()){ clearTimeout(syncT); try{ if(sections[current].dirty) await salvarSecao() }catch(e){ msg('Não foi possível salvar a seção anterior: '+e.message,true) } await prepararSecao(i) } show(i); scrollTo({top:0}) }
+async function go(i){ if(ligado()&&navigator.onLine){ clearTimeout(syncT); try{ if(sections[current].dirty) await salvarSecao() }catch(e){ msg('Não foi possível salvar a seção anterior: '+e.message,true) } await prepararSecao(i) } show(i); scrollTo({top:0}) }
 function aplic(s){ if(!ligado())return null; const sel=el('select',{'aria-label':'Aplicação'}); (s.apps||[]).forEach(a=>sel.append(el('option',{value:a.col},`${a.nome||'Aplicação'} · ${a.data||''}`))); sel.append(el('option',{value:'nova'},'Nova aplicação'));
   const cur=s.appCol!=null&&(s.apps||[]).some(a=>a.col===s.appCol)?String(s.appCol):'nova'; sel.value=cur;
   sel.addEventListener('change',async()=>{ if(sel.value==='nova'){ Object.keys(s.cat).forEach(k=>delete vals[k]); s.appCol=null; safeSet(key(),JSON.stringify(vals)); show(current) } else { await carregarSecao(s,Number(sel.value)); show(current) } });
-  return el('div',{class:'aplic'},el('span',{class:'legend'},'Aplicação desta seção:'),sel) }
+  return el('div',{class:'aplic'},el('span',{class:'legend'},'Aplicação desta seção:'),sel,(s.apps||[]).length>1?el('button',{type:'button',class:'btn mini',onclick:()=>abrirComparacao(s)},'Comparar aplicações'):null) }
 const done=s=>s.ids.filter(id=>vals[id]!=null&&vals[id]!=='').length;
 function refreshProgress(){
   somas.forEach(f=>f());
@@ -389,19 +403,19 @@ async function cabecalho(id,s){ // lê linhas 1-2 para achar aplicações
   const r=await vget(id,`${q1(tabName(s))}!A1:Z2`); const v=r.values||[]; const h1=v[0]||[],h2=v[1]||[]; const apps=[];
   for(let c=2;c<Math.max(h1.length,h2.length);c++) if(h1[c]||h2[c]) apps.push({col:c,nome:h1[c]||'',data:h2[c]||''});
   return apps; }
-async function salvarSecao(){
-  const s=sections[current]; const nome=tabName(s); const ids=Object.keys(s.cat);
+async function salvarSecao(s=sections[current],retomar=false){
+  const nome=tabName(s); const ids=Object.keys(s.cat);
   const {sheetId,nova}=await garantirAba(pac.sheetId,nome);
   let apps=nova?[]:await cabecalho(pac.sheetId,s);
   let col=s.appCol;
-  if(col==null){ col=apps.length?Math.max(...apps.map(a=>a.col))+1:2; s.appCol=col; }
+  if(col==null){ col=apps.length?(retomar?apps[apps.length-1].col:Math.max(...apps.map(a=>a.col))+1):2; s.appCol=col; }
   const n=apps.filter(a=>a.col<col).length+(apps.some(a=>a.col===col)?0:0);
   const label=`Aplicação ${col-1}`; const data=vals[ids.find(i=>/\.f\d+$/.test(i)&&DATA_RE.test((s.cat[i]||'').split(' › ').pop()))]||hoje();
   const L=colL(col); const rows=ids.map(i=>ser(vals[i]));
   const lote=[{range:`${q1(nome)}!${L}1:${L}${ids.length+2}`,values:[[label],[data],...rows.map(x=>[x])]}];
   if(nova||col===2) lote.push({range:`${q1(nome)}!A1:B${ids.length+2}`,values:[['id','campo'],['','data da aplicação'],...ids.map(i=>[i,s.cat[i]])]});
   await vbatch(pac.sheetId,lote);
-  s.dirty=false; await atualizarResumo();
+  s.dirty=false; delete sujo[s.num+':'+s.seq]; gravarSujo(); await atualizarResumo();
 }
 async function carregarSecao(s,colEscolhida){
   if(!ligado())return;
@@ -437,7 +451,7 @@ async function atualizarResumo(){
 /* ================= interface: paciente, login, sincronização ================= */
 let cad={}, syncT, syncMsg='';
 function msg(t,erro){ $('#estado').innerHTML=(erro?'<b style="color:#ffd9a0">'+t+'</b>':t) }
-function agendarSync(){ if(!ligado())return; clearTimeout(syncT); syncT=setTimeout(async()=>{ try{ msg('Enviando para a planilha…'); await salvarSecao(); msg('<b>Salvo na planilha</b> e neste aparelho.'); }catch(e){ msg('Não foi possível salvar na planilha: '+e.message+'. O rascunho continua neste aparelho.',true) } },3500) }
+function agendarSync(){ if(!ligado())return; if(!navigator.onLine){ avisoSync(); return } clearTimeout(syncT); syncT=setTimeout(async()=>{ try{ msg('Enviando para a planilha…'); await salvarSecao(); msg('<b>Salvo na planilha</b> e neste aparelho.'); if(Object.keys(sujo).length)sincronizarPendentes(); }catch(e){ msg('Não foi possível salvar na planilha: '+e.message+'. O rascunho continua neste aparelho.',true) } },3500) }
 async function entrar(){ try{ await pedirToken('consent'); $('#bgoo').textContent='Google conectado'; $('#bgoo').setAttribute('aria-pressed','true'); msg('<b>Google conectado.</b> Escolha o paciente.'); abrirPaciente() }catch(e){ msg(({popup_closed:'A janela do Google foi fechada antes de terminar. Clique em “Entrar com o Google” e conclua o acesso.',popup_failed_to_open:'O navegador bloqueou a janela do Google. Permita janelas pop-up para este site e tente de novo.'})[e.message]||'Não foi possível entrar: '+e.message,true) } }
 async function abrirPaciente(){
   const dlg=$('#dlg'); const box=$('#dlgbox'); box.replaceChildren(el('h2',{},'Paciente'));
@@ -460,7 +474,7 @@ async function abrirPaciente(){
     el('div',{class:'pe'},el('button',{class:'btn',type:'button',onclick:fechar},'Fechar'),el('span'))); }
 async function escolher(id,cod,cadNovo){
   try{ msg('Abrindo paciente…'); cad=cadNovo||await lerCadastro(id); pac={cod:cad.cod||cod,ini:cad.ini||'',sheetId:id}; safeSet('npp:pac',JSON.stringify({cod:pac.cod,ini:pac.ini}));
-    load(); sections.forEach(s=>{s.appCol=null}); await prepararSecao(current); precompute(); show(current); chip(); msg('<b>Paciente aberto.</b> As respostas são enviadas para a planilha enquanto você preenche.') }
+    load(); sections.forEach(s=>{s.appCol=null}); await sincronizarPendentes(); await prepararSecao(current); precompute(); show(current); chip(); msg('<b>Paciente aberto.</b> As respostas são enviadas para a planilha enquanto você preenche.') }
   catch(e){ msg('Não foi possível abrir o paciente: '+e.message,true) } }
 async function prepararSecao(i){ const s=sections[i]; if(!s)return; s.ids=[];s.cat={};s.groups=[];s.lastH=''; s.nodes.forEach(({n,b})=>{const f=R[n.type]; if(f)f(n,b,s)}); try{ await carregarSecao(s) }catch(e){ msg('Não foi possível ler a planilha: '+e.message,true) } }
 function chip(){ $('#bpac').textContent=pac.cod?`${pac.cod} · ${pac.ini||'—'}`:'Escolher paciente' }
@@ -582,20 +596,74 @@ function abrirExportar(){
     el('div',{class:'pe'},el('button',{class:'btn',type:'button',onclick:()=>dlg.close()},'Fechar'),el('span')));
   dlg.showModal(); }
 
+
+/* ---------- offline e fila de envio ---------- */
+let sincronizando=false;
+function avisoSync(){ const n=Object.keys(sujo).length; msg(navigator.onLine?(n?`<b>${n} seção(ões) aguardando envio.</b>`:'<b>Tudo enviado.</b>'):`<b>Sem internet.</b> ${n?n+' seção(ões) guardada(s) neste aparelho; ':''}o envio acontece quando a conexão voltar.`) ; $('#bnet').hidden=navigator.onLine }
+async function sincronizarPendentes(){
+  if(sincronizando||!ligado()||!navigator.onLine)return; const chaves=Object.keys(sujo); if(!chaves.length)return;
+  sincronizando=true; const orig=FICHA.meta.num; msg('Enviando respostas guardadas…');
+  try{
+    for(const k of chaves){ const [num,seq]=k.split(':'); if(num!==FICHA.meta.num) await trocarFicha(num,true);
+      const sec=sections.find(x=>String(x.seq)===seq); if(!sec){ delete sujo[k]; gravarSujo(); continue }
+      await salvarSecao(sec,sujo[k]==='c'); }
+    if(FICHA.meta.num!==orig) await trocarFicha(orig,true);
+    avisoSync();
+  }catch(e){ msg('Não foi possível enviar agora: '+e.message+'. As respostas continuam neste aparelho.',true) }
+  finally{ sincronizando=false } }
+addEventListener('online',()=>{ avisoSync(); sincronizarPendentes() }); addEventListener('offline',avisoSync);
+
+/* ---------- pendências, comparação, cronômetro, guia ---------- */
+function abrirPendencias(){ const dlg=$('#dlg'),box=$('#dlgbox'); refreshProgress();
+  const lin=sections.map((sec,i)=>{ const falta=Math.max(0,(sec.total||0)-(sec.cache||0)); const env=sujo[FICHA.meta.num+':'+sec.seq];
+    return el('button',{type:'button',class:'btn pend',onclick:()=>{dlg.close();go(i)}},el('span',{},sec.title),el('span',{class:'legend'},sec.total?`${sec.cache||0} de ${sec.total} campos`+(env?' · aguardando envio':''):'sem campos para preencher'))});
+  const fora=Object.keys(sujo).filter(k=>!k.startsWith(FICHA.meta.num+':')).length;
+  box.replaceChildren(el('h2',{},`Pendências · ${FICHA.meta.short}`),el('p',{class:'lead'},'Toque numa seção para abrir.'),el('div',{class:'cards'},...lin),
+    fora?el('p',{class:'legend'},`Outras fichas com envio pendente: ${fora}.`):null,el('div',{class:'pe'},el('button',{class:'btn',type:'button',onclick:()=>dlg.close()},'Fechar'),el('span'))); dlg.showModal() }
+async function abrirComparacao(sec){ const dlg=$('#dlg'),box=$('#dlgbox'); box.replaceChildren(el('h2',{},'Comparar aplicações'),el('p',{class:'legend'},'Lendo a planilha…')); dlg.showModal();
+  try{ const apps=await cabecalho(pac.sheetId,sec); const ids=Object.keys(sec.cat); const L=colL(Math.max(...apps.map(a=>a.col)));
+    const r=await vget(pac.sheetId,`${q1(tabName(sec))}!A3:${L}${ids.length+2}`); const lin=r.values||[];
+    const rows=lin.filter(l=>l[0]&&apps.some(a=>(l[a.col]||'')!=='')).map(l=>{ const vs=apps.map(a=>l[a.col]||''); return {campo:sec.cat[l[0]]||l[1]||l[0],vs,mud:new Set(vs.filter(Boolean)).size>1||vs.some(v=>v==='')&&vs.some(v=>v!=='')} });
+    const mud=rows.filter(x=>x.mud).length;
+    const tab=el('table',{class:'cmp'},el('thead',{},el('tr',{},el('th',{},'Campo'),...apps.map(a=>el('th',{},`${a.nome||'Aplicação'}${a.data?' · '+a.data:''}`)))),el('tbody',{},...rows.map(x=>el('tr',{class:x.mud?'mud':''},el('td',{},x.campo),...x.vs.map(v=>el('td',{},v||'—'))))));
+    box.replaceChildren(el('h2',{},'Comparar aplicações'),el('p',{class:'legend'},`${sec.title}: ${mud} de ${rows.length} campos mudaram (em destaque).`),el('div',{class:'cmpw'},tab),el('div',{class:'pe'},el('button',{class:'btn',type:'button',onclick:()=>dlg.close()},'Fechar'),el('span')))
+  }catch(e){ box.replaceChildren(el('h2',{},'Comparar aplicações'),el('p',{class:'note'},'Não foi possível comparar: '+e.message),el('button',{class:'btn',type:'button',onclick:()=>dlg.close()},'Fechar')) } }
+const cron={ms:0,t0:null}; const fmt=ms=>{const t=Math.floor(ms/1000);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
+const cronMs=()=>cron.ms+(cron.t0?Date.now()-cron.t0:0);
+setInterval(()=>document.querySelectorAll('.cron-t').forEach(e=>e.textContent=fmt(cronMs())),500);
+function cronEl(){ const t=el('b',{class:'cron-t','aria-label':'Cronômetro'},fmt(cronMs())); const b=el('button',{type:'button',class:'btn mini'},cron.t0?'Pausar':'Iniciar');
+  b.addEventListener('click',()=>{ if(cron.t0){cron.ms+=Date.now()-cron.t0;cron.t0=null}else cron.t0=Date.now(); b.textContent=cron.t0?'Pausar':'Iniciar' });
+  const z=el('button',{type:'button',class:'btn mini',onclick:()=>{cron.ms=0;cron.t0=cron.t0?Date.now():null;t.textContent=fmt(cronMs())}},'Zerar');
+  return el('div',{class:'cron'},el('span',{class:'legend'},'Cronômetro'),t,b,z) }
+function abrirGuia(){ const dlg=$('#dlg'),box=$('#dlgbox');
+  const P=(t,...x)=>el('li',{},el('b',{},t+' '),...x);
+  box.replaceChildren(el('h2',{},'Como usar'),
+   el('ol',{class:'guia'},
+    P('Instalar.','No Chrome ou Edge, use o ícone de instalar na barra de endereço ou o botão “Instalar no aparelho”. No iPad, abra no Safari, toque em Compartilhar e em “Adicionar à Tela de Início”.'),
+    P('Entrar.','Toque em “Entrar com o Google” e escolha o paciente. Para um novo, informe código, iniciais e nome completo. O nome fica só no cadastro.'),
+    P('Preencher.','Escolha a ficha no topo do menu e a seção na lista. As respostas são salvas neste aparelho e enviadas à planilha do paciente em poucos segundos.'),
+    P('Sem internet.','Continue normalmente. O menu mostra quantas seções aguardam envio, e o app envia sozinho quando a conexão voltar. Para isso, abra o app e entre com o Google de novo.'),
+    P('Nova aplicação.','Em cada seção, escolha “Nova aplicação” para registrar outra data. “Comparar aplicações” mostra o que mudou.'),
+    P('Pendências.','O botão “Pendências” lista os campos que faltam em cada seção.'),
+    P('Exportar.','“Exportar PDF ou Doc” gera o relatório com capa e gráficos, da seção ou da ficha inteira.'),
+    P('Privacidade.','Os dados ficam no seu Drive e neste aparelho. Em aparelho compartilhado, feche o app ao terminar.')),
+   el('div',{class:'pe'},el('button',{class:'btn pri',type:'button',onclick:()=>dlg.close()},'Entendi'),el('span'))); dlg.showModal() }
+let promptInstalar=null; addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); promptInstalar=e; $('#binst').hidden=false });
+addEventListener('appinstalled',()=>{ $('#binst').hidden=true });
 function montarNav(){ build(); const nav=$('#nav'); nav.replaceChildren();
   sections.forEach((s,i)=>nav.append(el('li',{},el('button',{type:'button',onclick:()=>go(i),'aria-current':'false'},
     el('span',{class:'t'},s.title),el('span',{class:'pct'}),el('span',{class:'s'},s.label),el('span',{class:'bar'},el('i')))))); }
-async function trocarFicha(num){
+async function trocarFicha(num,semCarga=false){
   if(!FICHAS[num]||FICHAS[num]===FICHA)return;
   clearTimeout(saveT); safeSet(key(),JSON.stringify(vals)); salvarImgs();
-  if(ligado()&&sections[current]&&sections[current].dirty){ clearTimeout(syncT); try{ await salvarSecao() }catch(e){ msg('Não foi possível salvar a seção anterior: '+e.message,true) } }
+  if(ligado()&&navigator.onLine&&!semCarga&&sections[current]&&sections[current].dirty){ clearTimeout(syncT); try{ await salvarSecao() }catch(e){ msg('Não foi possível salvar a seção anterior: '+e.message,true) } }
   FICHA=FICHAS[num]; safeSet('npp:ficha',num); current=0; load(); montarNav(); $('#rt').textContent=FICHA.meta.short; document.title=`${FICHA.meta.short} · NPP`;
-  if(ligado()) await prepararSecao(0);
-  precompute(); show(0); scrollTo({top:0}); }
+  if(ligado()&&navigator.onLine&&!semCarga) await prepararSecao(0);
+  precompute(); show(0); $('#fsel').value=num; scrollTo({top:0}); }
 function boot(){
   $('#rt').textContent=FICHA.meta.short; $('#rs').textContent='Registro durante a sessão';
   const fs=$('#fsel'); Object.values(FICHAS).sort((x,y)=>x.meta.num.localeCompare(y.meta.num)).forEach(F=>fs.append(el('option',{value:F.meta.num},`${F.meta.num} · ${F.meta.short}`))); fs.value=FICHA.meta.num; fs.addEventListener('change',()=>trocarFicha(fs.value));
-  $('#bgoo').addEventListener('click',()=>conectado?abrirPaciente():entrar()); $('#bpac').addEventListener('click',abrirPaciente); $('#bexp').addEventListener('click',abrirExportar);
+  $('#bgoo').addEventListener('click',()=>conectado?abrirPaciente():entrar()); $('#bpac').addEventListener('click',abrirPaciente); $('#bexp').addEventListener('click',abrirExportar); $('#bpend').addEventListener('click',abrirPendencias); $('#bhelp').addEventListener('click',abrirGuia); $('#binst').addEventListener('click',async()=>{ if(!promptInstalar)return; promptInstalar.prompt(); await promptInstalar.userChoice; promptInstalar=null; $('#binst').hidden=true }); if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{}); $('#bnet').hidden=navigator.onLine;
   chip(); load(); montarNav(); precompute(); show(0);
   $('#estado').innerHTML='<b>Salva neste aparelho.</b> Entre com o Google para enviar à planilha do paciente.';
 }
